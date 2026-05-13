@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raup's Morphospace — Shell Digital Doubles</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Courier+Prime&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090a;
+  --panel:#0c1210;
+  --border:rgba(170,140,70,0.25);
+  --gold:#c9a96e;
+  --cream:#e8dfd0;
+  --muted:#7a7060;
+  --soft:#b0a898;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--cream);font-family:'EB Garamond',serif}
+header{
+  display:flex;align-items:baseline;gap:16px;
+  padding:10px 20px;
+  border-bottom:1px solid var(--border);
+  background:rgba(7,9,10,0.9);
+}
+h1{font-family:'Playfair Display',serif;font-style:italic;font-weight:400;font-size:19px;color:var(--gold);white-space:nowrap}
+.sub{font-size:13px;color:var(--muted);font-style:italic}
+.layout{display:flex;height:calc(100vh - 41px);overflow:hidden}
+#c{display:block;width:100%;height:100%;cursor:grab}
+#c:active{cursor:grabbing}
+#wrap{flex:1;position:relative;min-width:0}
+.hint{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:var(--muted);font-style:italic;pointer-events:none;
+  background:rgba(7,9,10,0.7);padding:3px 10px;border-radius:20px;
+}
+aside{
+  width:298px;flex-shrink:0;
+  background:var(--panel);
+  border-left:1px solid var(--border);
+  overflow-y:auto;
+  padding:14px 16px;
+  display:flex;flex-direction:column;gap:14px;
+}
+aside::-webkit-scrollbar{width:4px}
+aside::-webkit-scrollbar-track{background:transparent}
+aside::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.sec-head{
+  font-family:'Playfair Display',serif;font-size:11px;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold);border-bottom:1px solid var(--border);
+  padding-bottom:5px;margin-bottom:8px;
+}
+.sl-row{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.sl-top{display:flex;justify-content:space-between;align-items:baseline}
+.sl-lbl{font-size:15px;color:var(--cream)}
+.sl-desc{font-size:12px;color:var(--muted);font-style:italic}
+.sl-val{font-family:'Courier Prime',monospace;font-size:13px;color:var(--gold)}
+input[type=range]{
+  width:100%;height:3px;-webkit-appearance:none;appearance:none;
+  border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--gold);border:2px solid var(--bg);
+  box-shadow:0 0 5px rgba(201,169,110,.5);cursor:pointer;
+}
+.sp-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.sp-btn{
+  background:rgba(255,255,255,.02);border:1px solid var(--border);
+  color:var(--cream);font-family:'EB Garamond',serif;font-size:13px;
+  padding:5px 7px;cursor:pointer;text-align:left;border-radius:2px;
+  transition:background .12s,border-color .12s,color .12s;line-height:1.3;
+}
+.sp-btn:hover,.sp-btn.on{background:rgba(201,169,110,.14);border-color:var(--gold);color:var(--gold)}
+.sp-italic{display:block;font-style:italic}
+.sp-plain{display:block;font-size:11px;color:var(--muted)}
+.sp-btn.on .sp-plain{color:rgba(201,169,110,.6)}
+.row2{display:grid;grid-template-columns:1fr auto;gap:6px}
+.btn{
+  background:transparent;border:1px solid var(--gold);color:var(--gold);
+  font-family:'EB Garamond',serif;font-size:14px;padding:7px 14px;
+  cursor:pointer;letter-spacing:.04em;border-radius:2px;
+  transition:background .12s;width:100%;
+}
+.btn:hover{background:rgba(201,169,110,.12)}
+.btn.on{background:rgba(201,169,110,.22)}
+.btn-sm{padding:7px 10px;width:auto}
+canvas#m2{
+  display:block;width:100%;height:160px;
+  border:1px solid var(--border);cursor:crosshair;
+  border-radius:2px;
+}
+.m2-xlab{font-size:10px;color:var(--muted);font-style:italic;text-align:center;margin-top:2px}
+.leg{display:flex;gap:10px;flex-wrap:wrap;margin-top:5px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.mc-info{font-size:11px;color:var(--muted);text-align:center;margin-top:3px;font-style:italic;min-height:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Raup's Morphospace</h1>
+  <span class="sub">Geometric analysis of shell coiling &middot; after Raup (1966) &middot; HIPS 18504 Week 8</span>
+</header>
+<div class="layout">
+  <div id="wrap">
+    <canvas id="c"></canvas>
+    <div class="hint">drag to rotate &middot; scroll to zoom</div>
+  </div>
+  <aside>
+
+    <div>
+      <div class="sec-head">Morphological Parameters</div>
+      <div class="sl-row">
+        <div class="sl-top">
+          <span><span class="sl-lbl">W</span> <span class="sl-desc">whorl expansion rate</span></span>
+          <span class="sl-val" id="vW">3.00</span>
+        </div>
+        <input type="range" id="sW" min="1.1" max="8" step="0.05" value="3">
+      </div>
+      <div class="sl-row">
+        <div class="sl-top">
+          <span><span class="sl-lbl">D</span> <span class="sl-desc">umbilical width</span></span>
+          <span class="sl-val" id="vD">0.35</span>
+        </div>
+        <input type="range" id="sD" min="0" max="0.88" step="0.01" value="0.35">
+      </div>
+      <div class="sl-row">
+        <div class="sl-top">
+          <span><span class="sl-lbl">T</span> <span class="sl-desc">translation rate</span></span>
+          <span class="sl-val" id="vT">0.00</span>
+        </div>
+        <input type="range" id="sT" min="0" max="3" step="0.05" value="0">
+      </div>
+      <div class="sl-row">
+        <div class="sl-top">
+          <span><span class="sl-lbl">S</span> <span class="sl-desc">cross-section shape</span></span>
+          <span class="sl-val" id="vS">1.00</span>
+        </div>
+        <input type="range" id="sS" min="0.4" max="2.2" step="0.05" value="1">
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-head">Real Species</div>
+      <div class="sp-grid" id="spg"></div>
+    </div>
+
+    <div>
+      <div class="row2">
+        <button class="btn" id="bGrow" onclick="startGrow()">&#9654; Animate Growth</button>
+        <button class="btn btn-sm" id="bMC" onclick="toggleMC()" title="Monte Carlo morphospace explorer">&#127922; MC</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-head">W &ndash; T Morphospace <span style="font-family:'EB Garamond';font-size:10px;font-style:italic;text-transform:none;letter-spacing:0;color:var(--muted)">(click to set W &amp; T)</span></div>
+      <canvas id="m2" width="266" height="160"></canvas>
+      <div class="m2-xlab">W (expansion rate) &rarr;</div>
+      <div class="leg">
+        <div class="leg-item"><span class="dot" style="background:var(--gold)"></span>real shells</div>
+        <div class="leg-item"><span class="dot" style="background:rgba(190,170,240,.9)"></span>current</div>
+        <div class="leg-item"><span class="dot" style="background:rgba(80,180,80,.55)"></span>MC: occupied</div>
+        <div class="leg-item"><span class="dot" style="background:rgba(180,60,60,.35)"></span>MC: empty</div>
+      </div>
+      <div class="mc-info" id="mcInfo"></div>
+    </div>
+
+  </aside>
+</div>
+
+<script>
+const SPECIES=[
+  {n:'Nautilus pompilius',  c:'Chambered nautilus', W:3.0, D:0.35, T:0.00, S:1.0},
+  {n:'Planorbis planorbis', c:'Ramshorn snail',     W:1.6, D:0.55, T:0.00, S:0.7},
+  {n:'Turritella terebra',  c:'Augur shell',        W:1.35,D:0.05, T:1.50, S:1.1},
+  {n:'Conus textile',       c:'Textile cone',       W:3.2, D:0.04, T:0.70, S:0.8},
+  {n:'Haliotis rufescens',  c:'Red abalone',        W:4.8, D:0.65, T:0.10, S:0.6},
+  {n:'Helix aspersa',       c:'Garden snail',       W:2.8, D:0.18, T:0.40, S:1.0},
+  {n:'Ceratites nodosus',   c:'Fossil ammonite',    W:1.9, D:0.25, T:0.00, S:1.2},
+  {n:'Turbo marmoratus',    c:'Green turban',       W:2.2, D:0.08, T:0.50, S:1.0},
+];
+
+let P={W:3,D:0.35,T:0,S:1};
+let growFrac=1, isGrowing=false;
+let mcRunning=false, mcTimer=null;
+
+/* ── THREE.JS SETUP ── */
+const cv=document.getElementById('c');
+const wr=document.getElementById('wrap');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setClearColor(0x07090a,1);
+
+const scene=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(42,1,.01,500);
+cam.position.set(0,0,7);
+cam.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0x3a4a3a,.5));
+const kl=new THREE.DirectionalLight(0xfff4e0,1.3);kl.position.set(3,-2,5);scene.add(kl);
+const fl=new THREE.DirectionalLight(0xa0b8d0,.4);fl.position.set(-4,3,2);scene.add(fl);
+const rl=new THREE.DirectionalLight(0xd4a860,.5);rl.position.set(0,6,-3);scene.add(rl);
+
+const shellGrp=new THREE.Group();scene.add(shellGrp);
+let shellMesh=null;
+
+const MAT=new THREE.MeshPhongMaterial({
+  color:0xf0e0c0,specular:0xffd060,shininess:90,side:THREE.DoubleSide
+});
+
+/* ── SHELL GEOMETRY ── */
+function buildGeo(W,D,T,S,frac){
+  const TH=180, PH=32;
+  const nw=Math.min(4, Math.log(250)/Math.log(Math.max(W,1.001)));
+  const k=Math.log(Math.max(W,1.001))/(2*Math.PI);
+  const tMax=nw*2*Math.PI*Math.max(frac,.005);
+  const segs=Math.max(3,Math.floor(TH*Math.max(frac,.005)));
+
+  const rmax=Math.exp(k*tMax);
+  const ns=2.4/(rmax*(1+(1-D)/2));
+
+  const pos=[],nor=[],uv=[],idx=[];
+
+  for(let i=0;i<=segs;i++){
+    const th=(i/segs)*tMax;
+    const r=Math.exp(k*th);
+    const eR=r*(1-D)/2*ns;
+    const eA=eR*S;
+    const rn=r*ns;
+    const zn=T*r*0.35*ns;
+    const cx=rn*Math.cos(th), cy=rn*Math.sin(th), cz=zn;
+    const rx=Math.cos(th), ry=Math.sin(th);
+
+    for(let j=0;j<=PH;j++){
+      const ph=(j/PH)*2*Math.PI;
+      const dx=eR*Math.cos(ph), dz=eA*Math.sin(ph);
+      pos.push(cx+dx*rx, cy+dx*ry, cz+dz);
+      const nx=eA*Math.cos(ph)*rx, ny=eA*Math.cos(ph)*ry, nz=eR*Math.sin(ph);
+      const nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+      nor.push(nx/nl,ny/nl,nz/nl);
+      uv.push(i/segs,j/PH);
+    }
+  }
+  for(let i=0;i<segs;i++){
+    for(let j=0;j<PH;j++){
+      const a=i*(PH+1)+j, b=(i+1)*(PH+1)+j, c=(i+1)*(PH+1)+(j+1), d=i*(PH+1)+(j+1);
+      idx.push(a,b,d,b,c,d);
+    }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('normal',  new THREE.Float32BufferAttribute(nor,3));
+  g.setAttribute('uv',      new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);
+  return g;
+}
+
+function rebuild(frac){
+  if(shellMesh){shellGrp.remove(shellMesh);shellMesh.geometry.dispose();}
+  const g=buildGeo(P.W,P.D,P.T,P.S,frac||1);
+  shellMesh=new THREE.Mesh(g,MAT);
+  g.computeBoundingBox();
+  const b=g.boundingBox;
+  shellMesh.position.set(
+    -(b.min.x+b.max.x)/2,
+    -(b.min.y+b.max.y)/2,
+    -(b.min.z+b.max.z)/2
+  );
+  shellGrp.add(shellMesh);
+}
+rebuild(1);
+
+/* ── ROTATION / ZOOM ── */
+let drag=false, lx=0, ly=0, rotX=.3, rotY=.4, autoR=true;
+let zoomDist=7;
+
+cv.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;autoR=false;});
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  rotY+=(e.clientX-lx)*.01; rotX+=(e.clientY-ly)*.01;
+  rotX=Math.max(-1.5,Math.min(1.5,rotX));
+  lx=e.clientX;ly=e.clientY;
+});
+window.addEventListener('mouseup',()=>{drag=false;setTimeout(()=>autoR=true,4000);});
+cv.addEventListener('wheel',e=>{
+  zoomDist=Math.max(2,Math.min(20,zoomDist+e.deltaY*.01));
+  e.preventDefault();
+},{passive:false});
+
+/* Touch support */
+let tLast=null;
+cv.addEventListener('touchstart',e=>{
+  autoR=false;
+  if(e.touches.length===1)tLast={x:e.touches[0].clientX,y:e.touches[0].clientY};
+});
+cv.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&tLast){
+    rotY+=(e.touches[0].clientX-tLast.x)*.012;
+    rotX+=(e.touches[0].clientY-tLast.y)*.012;
+    rotX=Math.max(-1.5,Math.min(1.5,rotX));
+    tLast={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  }
+  e.preventDefault();
+},{passive:false});
+cv.addEventListener('touchend',()=>{tLast=null;setTimeout(()=>autoR=true,5000);});
+
+/* ── RESIZE ── */
+function resize(){
+  const w=wr.clientWidth,h=wr.clientHeight;
+  renderer.setSize(w,h);
+  cam.aspect=w/h;
+  cam.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(wr);
+resize();
+
+/* ── ANIMATE ── */
+(function loop(){
+  requestAnimationFrame(loop);
+  if(autoR)rotY+=.003;
+  shellGrp.rotation.x=rotX;
+  shellGrp.rotation.y=rotY;
+  cam.position.setLength(zoomDist);
+  cam.lookAt(0,0,0);
+  if(isGrowing){
+    growFrac=Math.min(1,growFrac+.004);
+    rebuild(growFrac);
+    if(growFrac>=1){
+      isGrowing=false;
+      document.getElementById('bGrow').textContent='▶ Animate Growth';
+      document.getElementById('bGrow').classList.remove('on');
+    }
+  }
+  renderer.render(scene,cam);
+})();
+
+/* ── SLIDERS ── */
+function slBg(el){
+  const p=((+el.value-+el.min)/(+el.max-+el.min)*100).toFixed(1)+'%';
+  el.style.background=`linear-gradient(to right,var(--gold) 0%,var(--gold) ${p},rgba(170,140,70,.18) ${p})`;
+}
+function readSliders(){
+  P.W=+document.getElementById('sW').value;
+  P.D=+document.getElementById('sD').value;
+  P.T=+document.getElementById('sT').value;
+  P.S=+document.getElementById('sS').value;
+  document.getElementById('vW').textContent=P.W.toFixed(2);
+  document.getElementById('vD').textContent=P.D.toFixed(2);
+  document.getElementById('vT').textContent=P.T.toFixed(2);
+  document.getElementById('vS').textContent=P.S.toFixed(2);
+  ['W','D','T','S'].forEach(x=>slBg(document.getElementById('s'+x)));
+  rebuild(growFrac);
+  drawM2();
+}
+['W','D','T','S'].forEach(x=>{
+  const el=document.getElementById('s'+x);
+  el.addEventListener('input',()=>{readSliders();clearSp();});
+  slBg(el);
+});
+
+/* ── SPECIES ── */
+const spg=document.getElementById('spg');
+SPECIES.forEach((sp,i)=>{
+  const b=document.createElement('button');
+  b.className='sp-btn';b.id='sb'+i;
+  b.innerHTML=`<span class="sp-italic">${sp.n.split(' ')[1]}</span><span class="sp-plain">${sp.c}</span>`;
+  b.onclick=()=>loadSp(i);
+  spg.appendChild(b);
+});
+function clearSp(){document.querySelectorAll('.sp-btn').forEach(b=>b.classList.remove('on'));}
+function loadSp(i){
+  const sp=SPECIES[i];
+  Object.assign(P,{W:sp.W,D:sp.D,T:sp.T,S:sp.S});
+  ['W','D','T','S'].forEach(x=>{
+    const el=document.getElementById('s'+x);
+    el.value=P[x];slBg(el);
+    document.getElementById('v'+x).textContent=P[x].toFixed(2);
+  });
+  clearSp();document.getElementById('sb'+i).classList.add('on');
+  rebuild(growFrac);drawM2();
+}
+
+/* ── GROW ANIMATION ── */
+function startGrow(){
+  growFrac=.008;isGrowing=true;
+  const b=document.getElementById('bGrow');
+  b.textContent='⏸ Growing…';b.classList.add('on');
+}
+
+/* ── MORPHOSPACE 2D ── */
+const mc=document.getElementById('m2');
+const ctx=mc.getContext('2d');
+const W1=1.1,W2=8,T1=0,T2=3;
+const mcpts=[];
+
+function tx(W){return(W-W1)/(W2-W1)*mc.width;}
+function ty(T){return(1-(T-T1)/(T2-T1))*mc.height;}
+
+function drawM2(){
+  const w=mc.width,h=mc.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='rgba(7,9,10,.96)';ctx.fillRect(0,0,w,h);
+
+  ctx.strokeStyle='rgba(170,140,70,.1)';ctx.lineWidth=.5;
+  for(let wv=2;wv<=8;wv++){const x=tx(wv);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let tv=0;tv<=3;tv+=.5){const y=ty(tv);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+
+  ctx.font='8px "Courier Prime",monospace';ctx.fillStyle='rgba(122,112,96,.7)';
+  [2,4,6,8].forEach(wv=>ctx.fillText(wv,tx(wv)-2,h-3));
+  ctx.fillText('W\u2192',tx(6.3),h-3);
+  ctx.fillText('0',3,ty(0)-3);
+  ctx.fillText('1',3,ty(1)+3);
+  ctx.fillText('2',3,ty(2)+3);
+  ctx.fillText('\u2191T',3,ty(3)+9);
+
+  mcpts.forEach(p=>{
+    ctx.beginPath();ctx.arc(tx(p.W),ty(p.T),1.8,0,Math.PI*2);
+    ctx.fillStyle=p.occ?'rgba(80,180,80,.55)':'rgba(180,60,60,.32)';
+    ctx.fill();
+  });
+
+  SPECIES.forEach(sp=>{
+    const x=tx(sp.W),y=ty(sp.T);
+    ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle='rgba(201,169,110,.9)';ctx.fill();
+    ctx.fillStyle='rgba(232,220,200,.65)';
+    ctx.font='8.5px "EB Garamond",serif';
+    ctx.fillText(sp.n.split(' ')[1],x+5,y+3);
+  });
+
+  const cx=tx(P.W),cy=ty(P.T);
+  ctx.strokeStyle='rgba(190,170,240,.3)';ctx.lineWidth=.8;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,h);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(w,cy);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);
+  ctx.fillStyle='rgba(190,170,240,.9)';ctx.fill();
+  ctx.strokeStyle='rgba(190,170,240,.4)';ctx.lineWidth=1;ctx.stroke();
+}
+drawM2();
+
+mc.addEventListener('click',e=>{
+  const r=mc.getBoundingClientRect();
+  const mx=(e.clientX-r.left)*(mc.width/r.width);
+  const my=(e.clientY-r.top)*(mc.height/r.height);
+  P.W=Math.max(W1,Math.min(W2,W1+(mx/mc.width)*(W2-W1)));
+  P.T=Math.max(T1,Math.min(T2,T1+(1-my/mc.height)*(T2-T1)));
+  document.getElementById('sW').value=P.W;
+  document.getElementById('sT').value=P.T;
+  document.getElementById('vW').textContent=P.W.toFixed(2);
+  document.getElementById('vT').textContent=P.T.toFixed(2);
+  slBg(document.getElementById('sW'));slBg(document.getElementById('sT'));
+  clearSp();rebuild(growFrac);drawM2();
+});
+
+/* ── MONTE CARLO ── */
+function isOcc(W,T){
+  for(const sp of SPECIES){
+    const dw=(W-sp.W)/2.2,dt=(T-sp.T)/1.1;
+    if(dw*dw+dt*dt<.22)return true;
+  }
+  return false;
+}
+function toggleMC(){
+  const b=document.getElementById('bMC');
+  if(mcRunning){
+    clearInterval(mcTimer);mcRunning=false;b.classList.remove('on');
+    document.getElementById('mcInfo').textContent='';
+    return;
+  }
+  mcpts.length=0;mcRunning=true;b.classList.add('on');
+  let n=0;
+  mcTimer=setInterval(()=>{
+    for(let i=0;i<10;i++){
+      const W=W1+Math.random()*(W2-W1);
+      const T=T1+Math.random()*(T2-T1);
+      mcpts.push({W,T,occ:isOcc(W,T)});
+    }
+    n+=10;drawM2();
+    const occ=mcpts.filter(p=>p.occ).length;
+    document.getElementById('mcInfo').textContent=
+      n+' samples — '+occ+' occupied ('+Math.round(occ/n*100)+'%)';
+    if(n>=800){clearInterval(mcTimer);mcRunning=false;b.classList.remove('on');}
+  },70);
+}
+</script>
+</body>
+</html>
